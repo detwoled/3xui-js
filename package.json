@@ -5,7 +5,7 @@
     "main": "build/index.js",
     "types": "build/index.d.ts",
     "scripts": {
-        "install": "tsc -p tsconfig.build.json"
+        "install": "tsc -p tsconfig.json"
     },
     "devDependencies": {
         "@faker-js/faker": "^9.0.3",
