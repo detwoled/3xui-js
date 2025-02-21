@@ -5,7 +5,7 @@
     "main": "build/index.js",
     "types": "build/index.d.ts",
     "scripts": {
-        "install": "tsc -p tsconfig.build.json",
+        "install": "tsc -p tsconfig.build.json && resolve-tspaths",
         "build": "tsc -p tsconfig.build.json"
     },
     "devDependencies": {
