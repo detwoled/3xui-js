@@ -1,17 +1,10 @@
 {
-    "exclude": ["node_modules","build"],
-    "include": ["src"],
     "compilerOptions": {
-        "strict": true,
         "module": "CommonJS",
         "target": "ESNext",
-        "moduleResolution": "Node",
-        "outDir": "build",
-        "rootDirs": ["src"],
-        "resolveJsonModule": true,
-        "esModuleInterop": true,
+        "outDir": "./dist",
         "declaration": true,
-        "lib": ["ESNext"],
-        "baseUrl": "."
+        "emitDeclarationOnly": true,
+        "esModuleInterop": true
     }
 }
