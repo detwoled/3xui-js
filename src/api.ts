@@ -1,15 +1,15 @@
-import type { Inbound, InboundOptions } from "./lib/types/inbound";
-import type { Client, ClientOptions } from "./lib/types";
-import { createLogger } from "./lib/logger";
-import { decodeUri } from "./lib/utils/decodeUri";
-import { parseInbound } from "./lib/utils/parseInbound";
+import type { Inbound, InboundOptions } from "$lib/types/inbound";
+import type { Client, ClientOptions } from "$lib/types";
+import { createLogger } from "$lib/logger";
+import { decodeUri } from "$lib/utils/decodeUri";
+import { parseInbound } from "$lib/utils/parseInbound";
 import { Mutex } from "async-mutex";
 import { ProxyAgent } from "proxy-agent";
 import NodeCache from "node-cache";
 import Axios from "axios";
 import urlJoin from "url-join";
 import qs from "qs";
-import { stringifySettings } from "./lib/utils/stringifySettings";
+import { stringifySettings } from "$lib/utils/stringifySettings";
 
 export class Api {
     readonly host: string;

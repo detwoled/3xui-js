@@ -1,4 +1,4 @@
-import { Inbound } from "../../lib/types";
+import { Inbound } from "$lib/types";
 
 export const parseInbound = (inbound: Inbound): Inbound => {
     if (typeof inbound.settings === "string") {
