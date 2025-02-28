@@ -2,10 +2,11 @@
     "exclude": ["node_modules", "dist"],
     "include": ["src"],
     "compilerOptions": {
+        "strict": true,
         "module": "ESNext",
         "target": "ESNext",
         "moduleResolution": "Node",
-        "outDir": "./dist",
+        "outDir": "build",
         "rootDirs": ["src"],
         "resolveJsonModule": true,
         "esModuleInterop": true,
