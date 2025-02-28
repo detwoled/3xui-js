@@ -6,7 +6,7 @@
         "module": "ESNext",
         "target": "ESNext",
         "moduleResolution": "Node",
-        "outDir": "build",
+        "outDir": "dist",
         "rootDirs": ["src"],
         "resolveJsonModule": true,
         "esModuleInterop": true,
