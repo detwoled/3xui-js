@@ -212,7 +212,7 @@ export class Api {
         try {
             await this.login();
             this._logger.debug(`POST ${endpoint}`);
-            console.log(endpoint)
+            
             const response = await this._axios.post(endpoint, {}, {
                 headers: {
                     "Content-Type": "application/json",
