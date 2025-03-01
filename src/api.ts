@@ -211,27 +211,29 @@ export class Api {
 
         try {
             await this.login();
-            const response = await this._axios.post(endpoint, {
+            this._logger.debug(`POST ${endpoint}`);
+            console.log(endpoint)
+            const response = await this._axios.post(endpoint, {}, {
                 headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Content-Type": "application/json",
                     Accept: "application/json",
                     Cookie: this._cookie,
                 },
             });
-
             if (response.status !== 200 || !response.data.success) {
-                this._logger.error(`getNewX25519Cert have failed.`);
-                throw new Error(`getNewX25519Cert have failed.`);
+                this._logger.http(response.data);
+                this._logger.error(`${endpoint} have failed.`);
+                throw new Error(`${endpoint} have failed.`);
             }
 
-            return response.data.obj as { 
-                privateKey: string, 
-                publicKey: string ,
+            return response.data.obj as {
+                privateKey: string,
+                publicKey: string,
             };
         } catch (err) {
             if (err instanceof Axios.AxiosError) {
                 this._logger.http(err);
-                this._logger.error(`GET request failed: ${endpoint}`);
+                this._logger.error(`POST request failed: ${endpoint}`);
             }
 
             throw err;
