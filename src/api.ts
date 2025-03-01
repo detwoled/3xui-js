@@ -207,11 +207,11 @@ export class Api {
 
     async getX25519Cert () {
         const endpoint = '/server/getNewX25519Cert'
-        this._logger.debug(`GET ${endpoint}`);
+        this._logger.debug(`POST ${endpoint}`);
 
         try {
             await this.login();
-            const response = await this._axios.get(endpoint, {
+            const response = await this._axios.post(endpoint, {
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded",
                     Accept: "application/json",
