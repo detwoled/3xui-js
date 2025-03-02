@@ -468,6 +468,8 @@ export class Api {
     async addClient(inboundId: number, options: ClientOptions) {
         const release = await this._mutex.acquire();
 
+        options.totalGB*= 1024 * 1024 * 1024
+
         try {
             this._logger.debug(`Adding client ${options.email}.`);
             await this.post<Client>("/addClient", {
