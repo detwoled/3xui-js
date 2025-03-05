@@ -1,5 +1,11 @@
 import { XuiApi } from '../src'
 const xui = new XuiApi('http://YU46IniPtxCCVfOONdgHduIzcIcQq6f2WsXKAN3O91cwPCCZbFpYw6DHbeRnuOVhEPbT6f3jHFNZwvJzAnZ9TtYQIjhuofGOaDPHPPLsKoTYjyTOb6lf1uTxjjhNEysCyBFVXUlJfnJ0x14gRmOYMgZ2JhUjKEQjFgwrSxNEbeJq8OacSXTdKLVwSf5ewIegt2JpnL0sIyDYEiFc7inEVW7r1yYhNToAOely3Ewko1hNEZ87IVt3zFmUHY:ZuaFM6ayNHFa08txiIE0K9IZ1QotBeH6mKu6oPBu7aFhfhhq5I3ZANZnvcTT1W8EuqMesjqIRAmlW9PcOdPuFxip9PrkdiONO1pXYMOqSn8tOOTG8PLFy9SpBo5033viNFU9zeFJuqN78VDpnzR6mFbeM1bk5IORCJhtSK2Wyh0KStLZIRdCe4DXxfxlRW57O2YDOxW83B6l8LDuIB3UIz8Czyd8jXETRj8Gk3ua07HQ5pj6ZJO9PgCEyj@localhost:8324/Hc4SBBdUoZ30w0sxDhKHBMm7wZZ4mB8YtS0ckNMghz1k3VBj5haP2G5WS6beCgPrp05T1IHLLpMtQWI3ByDZyyiEKr3ptm09kMJyi2MGUYtPHKR809UchdNS4I232oJIRChrfMQb3GLqsXfrbksfCkOMEjgn96wwYn48CdwOZbaiZABBJIjXDrs8Ay4WDIQKuKjfkRb49j150M1jAabICfEstlRO2JDuukeX9kK7Ytv6y3TZUHjYCwrcOr3tmKC1eD6GAiYpy2CpfQ6gdEstFmCkyeLwvrwZc8rwYzPCsX1t')
 xui.debug = true
-const res = await xui.getX25519Cert()
-console.log(res)
+
+import * as cfg from './cgf.json'
+// @ts-ignore
+const res = await xui.addInbound(cfg.default)
+// @ts-ignore
+console.log(cfg.default)
+const client = await xui.addClient(res.id, {totalGB: 100, email: '12jfds432'})
+console.log(res, client)
