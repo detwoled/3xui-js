@@ -1,10 +1,8 @@
 export interface RealitySettings {
-    fingerprint: string;
     dest: string;
     serverNames: string[];
     privateKey: string;
     shortIds: string[];
-    publicKey: string;
     serverName?: string | undefined;
     show?: boolean | undefined;
     xver?: string | undefined;
@@ -12,5 +10,9 @@ export interface RealitySettings {
     maxClientVer?: string | undefined;
     maxTimeDiff?: number | undefined;
     shortId?: string | undefined;
-    spiderX?: string | undefined;
+    settings: {
+        publicKey: string;
+        spiderX?: string | undefined;
+        fingerprint: string;
+    }
 }
