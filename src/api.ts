@@ -78,6 +78,7 @@ export class Api {
         try {
             this._logger.debug("POST /login");
             const response = await this._axios.post("/login", cerdentials, {
+                timeout: 8,
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded",
                 },
@@ -118,6 +119,7 @@ export class Api {
             await this.login();
             const response = await this._axios.get(endpoint, {
                 data: qs.stringify(params),
+                timeout: 8,
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded",
                     Accept: "application/json",
@@ -148,6 +150,7 @@ export class Api {
             await this.login();
             this._logger.debug(`POST ${endpoint}`);
             const response = await this._axios.post(endpoint, params, {
+                timeout: 8,
                 headers: {
                     "Content-Type": "application/json",
                     Accept: "application/json",
