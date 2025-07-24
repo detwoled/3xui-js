@@ -1,5 +1,5 @@
 import type { Inbound, InboundOptions } from "$lib/types/inbound";
-import type { Client, ClientOptions } from "$lib/types";
+import type { Client, ClientOptions, ServerStatus } from "$lib/types";
 import { createLogger } from "$lib/logger";
 import { decodeUri } from "$lib/utils/decodeUri";
 import { parseInbound } from "$lib/utils/parseInbound";
@@ -111,8 +111,14 @@ export class Api {
         }
     }
 
-    private async get<T>(path: string, params?: unknown) {
-        const endpoint = urlJoin("/panel/api/inbounds", path);
+    private async get<T>(
+        path: string,
+        params?: unknown,
+        force_path: boolean = false,
+    ) {
+        const endpoint = force_path
+            ? path 
+            : urlJoin("/panel/api/inbounds", path)
         this._logger.debug(`GET ${endpoint}`);
 
         try {
@@ -143,8 +149,14 @@ export class Api {
         }
     }
 
-    private async post<T>(path: string, params?: unknown) {
-        const endpoint = urlJoin("/panel/api/inbounds", path);
+    private async post<T>(
+        path: string,
+        params?: unknown,
+        force_path: boolean = false,
+    ) {
+        const endpoint = force_path
+            ? path 
+            : urlJoin("/panel/api/inbounds", path)
 
         try {
             await this.login();
@@ -240,6 +252,22 @@ export class Api {
             }
 
             throw err;
+        }
+    }
+
+    async serverStatus() {
+        const release = await this._mutex.acquire();
+
+        try {
+            this._logger.debug("Getting server status...");
+            await this.post<ServerStatus>("/server/status", undefined, true);
+            this._logger.debug("The server status has been received.");
+            return true;
+        } catch (err) {
+            this._logger.warn("Cannot get server status.");
+            return false;
+        } finally {
+            release();
         }
     }
 
