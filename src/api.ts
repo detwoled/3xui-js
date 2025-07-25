@@ -111,14 +111,8 @@ export class Api {
         }
     }
 
-    private async get<T>(
-        path: string,
-        params?: unknown,
-        force_path: boolean = false,
-    ) {
-        const endpoint = force_path
-            ? path 
-            : urlJoin("/panel/api/inbounds", path)
+    private async get<T>(path: string, params?: unknown) {
+        const endpoint = urlJoin("/panel/api/inbounds", path);
         this._logger.debug(`GET ${endpoint}`);
 
         try {
@@ -149,14 +143,8 @@ export class Api {
         }
     }
 
-    private async post<T>(
-        path: string,
-        params?: unknown,
-        force_path: boolean = false,
-    ) {
-        const endpoint = force_path
-            ? path 
-            : urlJoin("/panel/api/inbounds", path)
+    private async post<T>(path: string, params?: unknown) {
+        const endpoint = urlJoin("/panel/api/inbounds", path);
 
         try {
             await this.login();
@@ -256,18 +244,36 @@ export class Api {
     }
 
     async serverStatus() {
-        const release = await this._mutex.acquire();
+        const endpoint = '/server/status'
+        this._logger.debug(`POST ${endpoint}`);
 
         try {
+            await this.login();
+            this._logger.debug(`POST ${endpoint}`);
+            
             this._logger.debug("Getting server status...");
-            const response = await this.post<ServerStatus>("/server/status", undefined, true);
-            this._logger.debug("The server status has been received.");
-            return response as ServerStatus
+
+            const response = await this._axios.post(endpoint, {}, {
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    Cookie: this._cookie,
+                },
+            });
+            if (response.status !== 200 || !response.data.success) {
+                this._logger.http(response.data);
+                this._logger.error(`${endpoint} have failed.`);
+                throw new Error(`${endpoint} have failed.`);
+            }
+
+            return response.data.obj as ServerStatus
         } catch (err) {
-            this._logger.warn("Cannot get server status.");
-            return null;
-        } finally {
-            release();
+            if (err instanceof Axios.AxiosError) {
+                this._logger.http(err);
+                this._logger.error(`POST request failed: ${endpoint}`);
+            }
+
+            throw err;
         }
     }
 
