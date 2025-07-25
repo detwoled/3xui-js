@@ -255,14 +255,14 @@ export class Api {
         }
     }
 
-    async serverStatus(): Promise<ServerStatus | null> {
+    async serverStatus() {
         const release = await this._mutex.acquire();
 
         try {
             this._logger.debug("Getting server status...");
-            const res = await this.post<ServerStatus>("/server/status", undefined, true);
+            const response = await this.post<ServerStatus>("/server/status", undefined, true);
             this._logger.debug("The server status has been received.");
-            return res;
+            return response as ServerStatus
         } catch (err) {
             this._logger.warn("Cannot get server status.");
             return null;
