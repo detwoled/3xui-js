@@ -48,6 +48,7 @@ export class Api {
             httpAgent: new ProxyAgent(),
             httpsAgent: new ProxyAgent(),
             validateStatus: () => true,
+            timeout: 8 * 1000,
         });
     }
 
