@@ -208,13 +208,13 @@ export class Api {
 
     async getX25519Cert () {
         const endpoint = '/server/getNewX25519Cert'
-        this._logger.debug(`POST ${endpoint}`);
+        this._logger.debug(`GET ${endpoint}`);
 
         try {
             await this.login();
-            this._logger.debug(`POST ${endpoint}`);
+            this._logger.debug(`GET ${endpoint}`);
             
-            const response = await this._axios.post(endpoint, {}, {
+            const response = await this._axios.get(endpoint, {
                 headers: {
                     "Content-Type": "application/json",
                     Accept: "application/json",
@@ -243,15 +243,15 @@ export class Api {
 
     async serverStatus() {
         const endpoint = '/server/status'
-        this._logger.debug(`POST ${endpoint}`);
+        this._logger.debug(`GET ${endpoint}`);
 
         try {
             await this.login();
-            this._logger.debug(`POST ${endpoint}`);
+            this._logger.debug(`GET ${endpoint}`);
             
             this._logger.debug("Getting server status...");
 
-            const response = await this._axios.post(endpoint, {}, {
+            const response = await this._axios.get(endpoint, {
                 headers: {
                     "Content-Type": "application/json",
                     Accept: "application/json",
