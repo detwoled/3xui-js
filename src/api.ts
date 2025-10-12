@@ -207,7 +207,7 @@ export class Api {
     }
 
     async getX25519Cert () {
-        const endpoint = '/server/getNewX25519Cert'
+        const endpoint = '/panel/api/server/getNewX25519Cert'
         this._logger.debug(`GET ${endpoint}`);
 
         try {
@@ -242,7 +242,7 @@ export class Api {
     }
 
     async serverStatus() {
-        const endpoint = '/server/status'
+        const endpoint = '/panel/api/server/status'
         this._logger.debug(`GET ${endpoint}`);
 
         try {
@@ -450,7 +450,7 @@ export class Api {
         }
     }
 
-    async getClient(clientId: string) {
+    async getClientById(clientId: string) {
         if (this._cache.has(`client:stat:${clientId}`)) {
             this._logger.debug(`Client ${clientId} loaded from cache.`);
             return this._cache.get(`client:stat:${clientId}`) as Client;
@@ -460,7 +460,7 @@ export class Api {
 
         try {
             this._logger.debug(`Fetching client ${clientId}...`);
-            const fetchEndpoint = `/getClientTraffics/${clientId}`;
+            const fetchEndpoint = `/getClientTrafficsById/${clientId}`;
             const client = await this.get<Client>(fetchEndpoint);
             if (client) {
                 this._logger.debug(`Client ${clientId} loaded from API.`);
@@ -480,6 +480,41 @@ export class Api {
         if (this._cache.has(`client:stat:${clientId}`)) {
             this._logger.debug(`Client ${clientId} loaded from cache.`);
             return this._cache.get(`client:stat:${clientId}`) as Client;
+        }
+
+        return null;
+    }
+
+     async getClientByEmail(clientEmail: string) {
+        if (this._cache.has(`client:stat:${clientEmail}`)) {
+            this._logger.debug(`Client ${clientEmail} loaded from cache.`);
+            return this._cache.get(`client:stat:${clientEmail}`) as Client;
+        }
+
+        const release = await this._mutex.acquire();
+
+        try {
+            this._logger.debug(`Fetching client ${clientEmail}...`);
+            const fetchEndpoint = `/getClientTraffics/${clientEmail}`;
+            const client = await this.get<Client>(fetchEndpoint);
+            if (client) {
+                this._logger.debug(`Client ${clientEmail} loaded from API.`);
+                this._cache.set(`client:stat:${clientEmail}`, client);
+                return client;
+            }
+        } catch (err) {
+            this._logger.error(err);
+            return null;
+        } finally {
+            release();
+        }
+
+        this._logger.debug(`Fetching client ${clientEmail} from inbounds...`);
+        await this.getInbounds();
+
+        if (this._cache.has(`client:stat:${clientEmail}`)) {
+            this._logger.debug(`Client ${clientEmail} loaded from cache.`);
+            return this._cache.get(`client:stat:${clientEmail}`) as Client;
         }
 
         return null;
@@ -515,7 +550,7 @@ export class Api {
             });
             this._logger.info(`Client ${options.email} added.`);
             this.flushCache();
-            return this.getClient(options.email);
+            return this.getClientByEmail(options.email);
         } catch (err) {
             this._logger.error(err);
             return null;
@@ -527,7 +562,7 @@ export class Api {
     async updateClient(clientId: string, options: Partial<ClientOptions>) {
         this._logger.debug(`Updating client ${clientId}.`);
 
-        const oldClient = await this.getClient(clientId);
+        const oldClient = await this.getClientById(clientId);
         const oldClientOptions = await this.getClientOptions(clientId);
         if (!oldClient || !oldClientOptions) {
             this._logger.warn(`Client ${clientId} not found. Skipping update.`);
@@ -555,7 +590,7 @@ export class Api {
 
             this._logger.info(`Client ${clientId} updated.`);
             this.flushCache();
-            return this.getClient(clientId);
+            return this.getClientById(clientId);
         } catch (err) {
             this._logger.error(err);
             return null;
@@ -567,7 +602,7 @@ export class Api {
     async deleteClient(clientId: string) {
         this._logger.debug(`Deleting client ${clientId}.`);
 
-        const client = await this.getClient(clientId);
+        const client = await this.getClientById(clientId);
         const options = await this.getClientOptions(clientId);
         if (!client || !options) {
             this._logger.warn(`Client ${clientId} not found. Skipping.`);
@@ -600,7 +635,7 @@ export class Api {
             return this._cache.get(`client:ips:${clientId}`) as string[];
         }
 
-        const client = await this.getClient(clientId);
+        const client = await this.getClientById(clientId);
         if (!client) {
             this._logger.warn(`Client ${clientId} not found. Skipping.`);
             return [];
@@ -630,7 +665,7 @@ export class Api {
 
     async resetClientIps(clientId: string) {
         this._logger.debug(`Resetting client ${clientId} ips...`);
-        const client = await this.getClient(clientId);
+        const client = await this.getClientById(clientId);
         if (!client) {
             this._logger.warn(`Client ${clientId} not found. Skipping.`);
             return false;
@@ -655,7 +690,7 @@ export class Api {
     async resetClientStat(clientId: string) {
         this._logger.debug(`Resetting client ${clientId} stat...`);
 
-        const client = await this.getClient(clientId);
+        const client = await this.getClientById(clientId);
         if (!client) {
             this._logger.warn(`Client ${clientId} not found. Skipping.`);
             return false;
@@ -727,22 +762,6 @@ export class Api {
         } catch (err) {
             this._logger.error(err);
             return [];
-        } finally {
-            release();
-        }
-    }
-
-    async sendBackup() {
-        const release = await this._mutex.acquire();
-
-        try {
-            this._logger.debug("Sending backup...");
-            await this.get<string>("/createbackup");
-            this._logger.info("Backup sent.");
-            return true;
-        } catch (err) {
-            this._logger.error(err);
-            return false;
         } finally {
             release();
         }
