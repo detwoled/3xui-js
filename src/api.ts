@@ -268,7 +268,7 @@ export class Api {
         } catch (err) {
             if (err instanceof Axios.AxiosError) {
                 this._logger.http(err);
-                this._logger.error(`POST request failed: ${endpoint}`);
+                this._logger.error(`GET request failed: ${endpoint}`);
             }
 
             throw err;
@@ -461,11 +461,11 @@ export class Api {
         try {
             this._logger.debug(`Fetching client ${clientId}...`);
             const fetchEndpoint = `/getClientTrafficsById/${clientId}`;
-            const client = await this.get<Client>(fetchEndpoint);
+            const client = await this.get<Client[]>(fetchEndpoint);
             if (client) {
                 this._logger.debug(`Client ${clientId} loaded from API.`);
-                this._cache.set(`client:stat:${clientId}`, client);
-                return client;
+                this._cache.set(`client:stat:${clientId}`, client[0]);
+                return client[0];
             }
         } catch (err) {
             this._logger.error(err);
@@ -473,9 +473,6 @@ export class Api {
         } finally {
             release();
         }
-
-        this._logger.debug(`Fetching client ${clientId} from inbounds...`);
-        await this.getInbounds();
 
         if (this._cache.has(`client:stat:${clientId}`)) {
             this._logger.debug(`Client ${clientId} loaded from cache.`);
@@ -509,9 +506,6 @@ export class Api {
             release();
         }
 
-        this._logger.debug(`Fetching client ${clientEmail} from inbounds...`);
-        await this.getInbounds();
-
         if (this._cache.has(`client:stat:${clientEmail}`)) {
             this._logger.debug(`Client ${clientEmail} loaded from cache.`);
             return this._cache.get(`client:stat:${clientEmail}`) as Client;
@@ -535,7 +529,7 @@ export class Api {
         return null;
     }
 
-    async addClient(inboundId: number, options: ClientOptions) {
+    async addClient(inboundId: number, options: ClientOptions, returnIfExists = true) {
         const release = await this._mutex.acquire();
 
         options.totalGB*= 1024 * 1024 * 1024
@@ -550,6 +544,9 @@ export class Api {
             });
             this._logger.info(`Client ${options.email} added.`);
             this.flushCache();
+
+            if (!returnIfExists) return null;
+            
             return this.getClientByEmail(options.email);
         } catch (err) {
             this._logger.error(err);
@@ -575,7 +572,6 @@ export class Api {
             let id: string = "";
             if ("id" in oldClientOptions) id = oldClientOptions.id;
             if ("password" in oldClientOptions) id = oldClientOptions.password;
-
             await this.post<Client>(`/updateClient/${id}`, {
                 id: oldClient.inboundId,
                 settings: JSON.stringify({
