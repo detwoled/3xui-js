@@ -499,8 +499,8 @@ export class Api {
                 this._cache.set(`client:stat:${clientEmail}`, client);
                 return client;
             }
-        } catch (err) {
-            this._logger.error(err);
+        } catch (err: any) {
+            this._logger.error(err?.msg || err);
             return null;
         } finally {
             release();
@@ -548,8 +548,8 @@ export class Api {
             if (!returnIfExists) return null;
             
             return this.getClientByEmail(options.email);
-        } catch (err) {
-            this._logger.error(err);
+        } catch (err: any) {
+            this._logger.error(err?.msg || err);
             return null;
         } finally {
             release();
@@ -587,8 +587,8 @@ export class Api {
             this._logger.info(`Client ${clientId} updated.`);
             this.flushCache();
             return this.getClientById(clientId);
-        } catch (err) {
-            this._logger.error(err);
+        } catch (err: any) {
+            this._logger.error(err?.msg || err);
             return null;
         } finally {
             release();
@@ -755,8 +755,8 @@ export class Api {
             this._cache.set("clients:online", emails);
             this._logger.debug("Online clients loaded from API.");
             return emails || [];
-        } catch (err) {
-            this._logger.error(err);
+        } catch (err: any) {
+            this._logger.error(err?.msg || err);
             return [];
         } finally {
             release();
