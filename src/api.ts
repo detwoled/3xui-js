@@ -527,7 +527,7 @@ export class Api {
         return null;
     }
 
-    async addClient(inboundId: number, options: ClientOptions, returnIfExists = true) {
+    async addClient(inboundId: number, options: ClientOptions, returnIfCreated = true) {
         const release = await this._mutex.acquire();
 
         options.totalGB*= 1024 * 1024 * 1024
@@ -543,7 +543,7 @@ export class Api {
             this._logger.info(`Client ${options.email} added.`);
             this.flushCache();
 
-            if (!returnIfExists) return null;
+            if (!returnIfCreated) return null;
             
             return this.getClientByEmail(options.email);
         } catch (err: any) {
