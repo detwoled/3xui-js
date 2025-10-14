@@ -212,7 +212,6 @@ export class Api {
 
         try {
             await this.login();
-            this._logger.debug(`GET ${endpoint}`);
             
             const response = await this._axios.get(endpoint, {
                 headers: {
@@ -247,7 +246,6 @@ export class Api {
 
         try {
             await this.login();
-            this._logger.debug(`GET ${endpoint}`);
             
             this._logger.debug("Getting server status...");
 
