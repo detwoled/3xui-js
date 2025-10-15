@@ -23,7 +23,7 @@ export class Api {
     private readonly _axios;
     private readonly _mutex;
     private _cookie;
-    private readonly _requestTimeout: number = 8 * 1000; // default 8s timeout
+    private readonly _requestTimeout: number = 15 * 1000; // default 8s timeout
 
     constructor(uri: string) {
         const xui = decodeUri(uri);
