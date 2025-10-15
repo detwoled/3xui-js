@@ -23,6 +23,7 @@ export class Api {
     private readonly _axios;
     private readonly _mutex;
     private _cookie;
+    private readonly _requestTimeout: number = 8 * 1000; // default 8s timeout
 
     constructor(uri: string) {
         const xui = decodeUri(uri);
@@ -48,7 +49,6 @@ export class Api {
             httpAgent: new ProxyAgent(),
             httpsAgent: new ProxyAgent(),
             validateStatus: () => true,
-            timeout: 8 * 1000,
         });
     }
 
@@ -66,15 +66,23 @@ export class Api {
         this._cache.flushAll();
     }
 
-    private async login() {
+    private async login(timeoutMs?: number) {
         if (this._cookie) {
             return;
         }
+
+        const t = timeoutMs ?? this._requestTimeout;
 
         const cerdentials = qs.stringify({
             username: this.username,
             password: this._password,
         });
+
+        const source = Axios.CancelToken.source();
+        const timeout = setTimeout(() => {
+            source.cancel("login timeout");
+            this._logger.warn("Login request timed out");
+        }, t);
 
         try {
             this._logger.debug("POST /login");
@@ -82,6 +90,7 @@ export class Api {
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded",
                 },
+                cancelToken: source.token,
             });
 
             if (
@@ -108,15 +117,24 @@ export class Api {
             }
 
             throw err;
+        } finally {
+            clearTimeout(timeout);
         }
     }
 
-    private async get<T>(path: string, params?: unknown) {
+    private async get<T>(path: string, params?: unknown, timeoutMs?: number) {
+        const t = timeoutMs ?? this._requestTimeout;
         const endpoint = urlJoin("/panel/api/inbounds", path);
         this._logger.debug(`GET ${endpoint}`);
 
+        const source = Axios.CancelToken.source();
+        const timeout = setTimeout(() => {
+            source.cancel(`GET ${endpoint} timeout`);
+            this._logger.warn(`GET ${endpoint} request timed out`);
+        }, t);
+
         try {
-            await this.login();
+            await this.login(t);
             const response = await this._axios.get(endpoint, {
                 data: qs.stringify(params),
                 headers: {
@@ -124,6 +142,7 @@ export class Api {
                     Accept: "application/json",
                     Cookie: this._cookie,
                 },
+                cancelToken: source.token,
             });
 
             if (response.status !== 200 || !response.data.success) {
@@ -139,14 +158,23 @@ export class Api {
             }
 
             throw err;
+        } finally {
+            clearTimeout(timeout);
         }
     }
 
-    private async post<T>(path: string, params?: unknown) {
+    private async post<T>(path: string, params?: unknown, timeoutMs?: number) {
+        const t = timeoutMs ?? this._requestTimeout;
         const endpoint = urlJoin("/panel/api/inbounds", path);
 
+        const source = Axios.CancelToken.source();
+        const timeout = setTimeout(() => {
+            source.cancel(`POST ${endpoint} timeout`);
+            this._logger.warn(`POST ${endpoint} request timed out`);
+        }, t);
+
         try {
-            await this.login();
+            await this.login(t);
             this._logger.debug(`POST ${endpoint}`);
             const response = await this._axios.post(endpoint, params, {
                 headers: {
@@ -154,6 +182,7 @@ export class Api {
                     Accept: "application/json",
                     Cookie: this._cookie,
                 },
+                cancelToken: source.token,
             });
 
             if (response.status !== 200 || !response.data.success) {
@@ -170,6 +199,8 @@ export class Api {
             }
 
             throw err;
+        } finally {
+            clearTimeout(timeout);
         }
     }
 
@@ -206,12 +237,19 @@ export class Api {
         });
     }
 
-    async getX25519Cert () {
+    async getX25519Cert(timeoutMs?: number) {
+        const t = timeoutMs ?? this._requestTimeout;
         const endpoint = '/panel/api/server/getNewX25519Cert'
         this._logger.debug(`GET ${endpoint}`);
 
+        const source = Axios.CancelToken.source();
+        const timeout = setTimeout(() => {
+            source.cancel(`GET ${endpoint} timeout`);
+            this._logger.warn(`GET ${endpoint} request timed out`);
+        }, t);
+
         try {
-            await this.login();
+            await this.login(t);
             
             const response = await this._axios.get(endpoint, {
                 headers: {
@@ -219,6 +257,7 @@ export class Api {
                     Accept: "application/json",
                     Cookie: this._cookie,
                 },
+                cancelToken: source.token,
             });
             if (response.status !== 200 || !response.data.success) {
                 this._logger.http(response.data);
@@ -237,15 +276,24 @@ export class Api {
             }
 
             throw err;
+        } finally {
+            clearTimeout(timeout);
         }
     }
 
-    async serverStatus() {
+    async serverStatus(timeoutMs?: number) {
+        const t = timeoutMs ?? this._requestTimeout;
         const endpoint = '/panel/api/server/status'
         this._logger.debug(`GET ${endpoint}`);
 
+        const source = Axios.CancelToken.source();
+        const timeout = setTimeout(() => {
+            source.cancel(`GET ${endpoint} timeout`);
+            this._logger.warn(`GET ${endpoint} request timed out`);
+        }, t);
+
         try {
-            await this.login();
+            await this.login(t);
             
             this._logger.debug("Getting server status...");
 
@@ -255,6 +303,7 @@ export class Api {
                     Accept: "application/json",
                     Cookie: this._cookie,
                 },
+                cancelToken: source.token,
             });
             if (response.status !== 200 || !response.data.success) {
                 this._logger.http(response.data);
@@ -270,15 +319,17 @@ export class Api {
             }
 
             throw err;
+        } finally {
+            clearTimeout(timeout);
         }
     }
 
-    async checkHealth() {
+    async checkHealth(timeoutMs?: number) {
         const release = await this._mutex.acquire();
 
         try {
             this._logger.debug("Checking health...");
-            await this.get<Inbound[]>("/list");
+            await this.get<Inbound[]>("/list", undefined, timeoutMs);
             this._logger.debug("Health check passed.");
             return true;
         } catch (err) {
@@ -289,7 +340,7 @@ export class Api {
         }
     }
 
-    async getInbounds() {
+    async getInbounds(timeoutMs?: number) {
         if (this._cache.has("inbounds")) {
             this._logger.debug("Inbounds loaded from cache.");
             return this._cache.get("inbounds") as Inbound[];
@@ -299,7 +350,7 @@ export class Api {
 
         try {
             this._logger.debug("Fetching inbounds...");
-            const inbounds = await this.get<Inbound[]>("/list");
+            const inbounds = await this.get<Inbound[]>("/list", undefined, timeoutMs);
             this._logger.debug("Inbounds loaded from API.");
 
             const result = inbounds.map((inbound) => {
@@ -318,7 +369,7 @@ export class Api {
         }
     }
 
-    async getInbound(id: number) {
+    async getInbound(id: number, timeoutMs?: number) {
         if (this._cache.has(`inbound:${id}`)) {
             this._logger.debug(`Inbound ${id} loaded from cache.`);
             return this._cache.get(`inbound:${id}`) as Inbound;
@@ -328,7 +379,7 @@ export class Api {
 
         try {
             this._logger.debug(`Fetching inbound ${id}...`);
-            const inbound = await this.get<Inbound>(`/get/${id}`);
+            const inbound = await this.get<Inbound>(`/get/${id}`, undefined, timeoutMs);
             this._logger.debug(`Inbound ${id} loaded from API.`);
             const result = parseInbound(inbound);
             this.cacheInbound(result);
@@ -341,7 +392,7 @@ export class Api {
         }
     }
 
-    async addInbound(options: InboundOptions) {
+    async addInbound(options: InboundOptions, timeoutMs?: number) {
         const release = await this._mutex.acquire();
 
         try {
@@ -351,7 +402,7 @@ export class Api {
                 settings: stringifySettings(options.settings),
                 streamSettings: stringifySettings(options.streamSettings),
                 sniffing: stringifySettings(options.sniffing),
-            });
+            }, timeoutMs);
             this._logger.info(`Inbound ${inbound.remark} added.`);
             this.flushCache();
             const result = parseInbound(inbound);
@@ -365,8 +416,8 @@ export class Api {
         }
     }
 
-    async updateInbound(id: number, options: Partial<InboundOptions>) {
-        const oldInbound = await this.getInbound(id);
+    async updateInbound(id: number, options: Partial<InboundOptions>, timeoutMs?: number) {
+        const oldInbound = await this.getInbound(id, timeoutMs);
         if (!oldInbound) {
             this._logger.warn(`Inbound ${id} not found. Skipping update.`);
             return null;
@@ -382,7 +433,7 @@ export class Api {
                 settings: JSON.stringify(data.settings),
                 streamSettings: JSON.stringify(data.streamSettings),
                 sniffing: JSON.stringify(data.sniffing),
-            });
+            }, timeoutMs);
 
             this._logger.info(`Inbound ${inbound.remark} updated.`);
             this.flushCache();
@@ -397,12 +448,12 @@ export class Api {
         }
     }
 
-    async resetInboundsStat() {
+    async resetInboundsStat(timeoutMs?: number) {
         const release = await this._mutex.acquire();
 
         try {
             this._logger.debug("Resetting inbounds stat...");
-            await this.post(`/resetAllTraffics`);
+            await this.post(`/resetAllTraffics`, undefined, timeoutMs);
             this.flushCache();
             this._logger.info("Inbounds stat reseted.");
             return true;
@@ -414,12 +465,12 @@ export class Api {
         }
     }
 
-    async resetInboundStat(id: number) {
+    async resetInboundStat(id: number, timeoutMs?: number) {
         const release = await this._mutex.acquire();
 
         try {
             this._logger.debug(`Resetting inbound ${id} stat...`);
-            await this.post(`/resetAllClientTraffics/${id}`);
+            await this.post(`/resetAllClientTraffics/${id}`, undefined, timeoutMs);
             this.flushCache();
             this._logger.info(`Inbound ${id} stat reseted.`);
             return true;
@@ -431,12 +482,12 @@ export class Api {
         }
     }
 
-    async deleteInbound(id: number) {
+    async deleteInbound(id: number, timeoutMs?: number) {
         const release = await this._mutex.acquire();
 
         try {
             this._logger.debug(`Deleting inbound ${id}.`);
-            await this.post(`/del/${id}`);
+            await this.post(`/del/${id}`, undefined, timeoutMs);
             this._logger.info(`Inbound ${id} deleted.`);
             this.flushCache();
             return true;
@@ -448,7 +499,7 @@ export class Api {
         }
     }
 
-    async getClientById(clientId: string) {
+    async getClientById(clientId: string, timeoutMs?: number) {
         if (this._cache.has(`client:stat:${clientId}`)) {
             this._logger.debug(`Client ${clientId} loaded from cache.`);
             return this._cache.get(`client:stat:${clientId}`) as Client;
@@ -459,7 +510,7 @@ export class Api {
         try {
             this._logger.debug(`Fetching client ${clientId}...`);
             const fetchEndpoint = `/getClientTrafficsById/${clientId}`;
-            const client = await this.get<Client[]>(fetchEndpoint);
+            const client = await this.get<Client[]>(fetchEndpoint, undefined, timeoutMs);
             if (client) {
                 this._logger.debug(`Client ${clientId} loaded from API.`);
                 this._cache.set(`client:stat:${clientId}`, client[0]);
@@ -480,7 +531,7 @@ export class Api {
         return null;
     }
 
-     async getClientByEmail(clientEmail: string) {
+     async getClientByEmail(clientEmail: string, timeoutMs?: number) {
         if (this._cache.has(`client:stat:${clientEmail}`)) {
             this._logger.debug(`Client ${clientEmail} loaded from cache.`);
             return this._cache.get(`client:stat:${clientEmail}`) as Client;
@@ -491,7 +542,7 @@ export class Api {
         try {
             this._logger.debug(`Fetching client ${clientEmail}...`);
             const fetchEndpoint = `/getClientTraffics/${clientEmail}`;
-            const client = await this.get<Client>(fetchEndpoint);
+            const client = await this.get<Client>(fetchEndpoint, undefined, timeoutMs);
             if (client) {
                 this._logger.debug(`Client ${clientEmail} loaded from API.`);
                 this._cache.set(`client:stat:${clientEmail}`, client);
@@ -512,13 +563,13 @@ export class Api {
         return null;
     }
 
-    async getClientOptions(clientId: string) {
+    async getClientOptions(clientId: string, timeoutMs?: number) {
         if (this._cache.has(`client:options:${clientId}`)) {
             this._logger.debug(`Client ${clientId} options loaded from cache.`);
             return this._cache.get(`client:options:${clientId}`) as ClientOptions;
         }
 
-        await this.getInbounds();
+        await this.getInbounds(timeoutMs);
         if (this._cache.has(`client:options:${clientId}`)) {
             this._logger.debug(`Client ${clientId} options loaded from cache.`);
             return this._cache.get(`client:options:${clientId}`) as ClientOptions;
@@ -527,7 +578,7 @@ export class Api {
         return null;
     }
 
-    async addClient(inboundId: number, options: ClientOptions, returnIfCreated = true) {
+    async addClient(inboundId: number, options: ClientOptions, returnIfCreated = true, timeoutMs?: number) {
         const release = await this._mutex.acquire();
 
         options.totalGB*= 1024 * 1024 * 1024
@@ -539,13 +590,13 @@ export class Api {
                 settings: JSON.stringify({
                     clients: [options],
                 }),
-            });
+            }, timeoutMs);
             this._logger.info(`Client ${options.email} added.`);
             this.flushCache();
 
             if (!returnIfCreated) return null;
             
-            return this.getClientByEmail(options.email);
+            return this.getClientByEmail(options.email, timeoutMs);
         } catch (err: any) {
             this._logger.error(err?.msg || err);
             return null;
@@ -554,11 +605,11 @@ export class Api {
         }
     }
 
-    async updateClient(clientId: string, options: Partial<ClientOptions>) {
+    async updateClient(clientId: string, options: Partial<ClientOptions>, timeoutMs?: number) {
         this._logger.debug(`Updating client ${clientId}.`);
 
-        const oldClient = await this.getClientById(clientId);
-        const oldClientOptions = await this.getClientOptions(clientId);
+        const oldClient = await this.getClientById(clientId, timeoutMs);
+        const oldClientOptions = await this.getClientOptions(clientId, timeoutMs);
         if (!oldClient || !oldClientOptions) {
             this._logger.warn(`Client ${clientId} not found. Skipping update.`);
             return null;
@@ -580,11 +631,11 @@ export class Api {
                         },
                     ],
                 }),
-            });
+            }, timeoutMs);
 
             this._logger.info(`Client ${clientId} updated.`);
             this.flushCache();
-            return this.getClientById(clientId);
+            return this.getClientById(clientId, timeoutMs);
         } catch (err: any) {
             this._logger.error(err?.msg || err);
             return null;
@@ -593,11 +644,11 @@ export class Api {
         }
     }
 
-    async deleteClient(clientId: string) {
+    async deleteClient(clientId: string, timeoutMs?: number) {
         this._logger.debug(`Deleting client ${clientId}.`);
 
-        const client = await this.getClientById(clientId);
-        const options = await this.getClientOptions(clientId);
+        const client = await this.getClientById(clientId, timeoutMs);
+        const options = await this.getClientOptions(clientId, timeoutMs);
         if (!client || !options) {
             this._logger.warn(`Client ${clientId} not found. Skipping.`);
             return;
@@ -609,7 +660,7 @@ export class Api {
             let id = options.email;
             if ("id" in options) id = options.id;
             if ("password" in options) id = options.password;
-            await this.post(`/${client.inboundId}/delClient/${id}`);
+            await this.post(`/${client.inboundId}/delClient/${id}`, undefined, timeoutMs);
             this.flushCache();
             this._logger.info(`Client ${clientId} deleted.`);
             return true;
@@ -621,7 +672,7 @@ export class Api {
         }
     }
 
-    async getClientIps(clientId: string) {
+    async getClientIps(clientId: string, timeoutMs?: number) {
         this._logger.debug(`Fetching client ${clientId} ips...`);
 
         if (this._cache.has(`client:ips:${clientId}`)) {
@@ -629,7 +680,7 @@ export class Api {
             return this._cache.get(`client:ips:${clientId}`) as string[];
         }
 
-        const client = await this.getClientById(clientId);
+        const client = await this.getClientById(clientId, timeoutMs);
         if (!client) {
             this._logger.warn(`Client ${clientId} not found. Skipping.`);
             return [];
@@ -638,7 +689,7 @@ export class Api {
         const release = await this._mutex.acquire();
 
         try {
-            const data = await this.post<string>(`/clientIps/${client.email}`);
+            const data = await this.post<string>(`/clientIps/${client.email}`, undefined, timeoutMs);
             if (data === "No IP Record") {
                 this._logger.debug(`Client ${clientId} has no IPs.`);
                 return [];
@@ -657,9 +708,9 @@ export class Api {
         }
     }
 
-    async resetClientIps(clientId: string) {
+    async resetClientIps(clientId: string, timeoutMs?: number) {
         this._logger.debug(`Resetting client ${clientId} ips...`);
-        const client = await this.getClientById(clientId);
+        const client = await this.getClientById(clientId, timeoutMs);
         if (!client) {
             this._logger.warn(`Client ${clientId} not found. Skipping.`);
             return false;
@@ -668,7 +719,7 @@ export class Api {
         const release = await this._mutex.acquire();
 
         try {
-            await this.post(`/clearClientIps/${client.email}`);
+            await this.post(`/clearClientIps/${client.email}`, undefined, timeoutMs);
             this._cache.del(`client:ips:${client.email}`);
             this._cache.del(`client:ips:${clientId}`);
             this._logger.debug(`Client ${clientId} ips reseted.`);
@@ -681,10 +732,10 @@ export class Api {
         }
     }
 
-    async resetClientStat(clientId: string) {
+    async resetClientStat(clientId: string, timeoutMs?: number) {
         this._logger.debug(`Resetting client ${clientId} stat...`);
 
-        const client = await this.getClientById(clientId);
+        const client = await this.getClientById(clientId, timeoutMs);
         if (!client) {
             this._logger.warn(`Client ${clientId} not found. Skipping.`);
             return false;
@@ -694,7 +745,7 @@ export class Api {
 
         try {
             const inboundId = client.inboundId;
-            await this.post(`/${inboundId}/resetClientTraffic/${client.email}`);
+            await this.post(`/${inboundId}/resetClientTraffic/${client.email}`, undefined, timeoutMs);
             this._logger.info(`Client ${client.email} stat reseted.`);
             this.flushCache();
             return true;
@@ -706,12 +757,12 @@ export class Api {
         }
     }
 
-    async deleteDepletedClients() {
+    async deleteDepletedClients(timeoutMs?: number) {
         const release = await this._mutex.acquire();
 
         try {
             this._logger.debug(`Deleting depleted clients...`);
-            await this.post("/delDepletedClients/-1");
+            await this.post("/delDepletedClients/-1", undefined, timeoutMs);
             this.flushCache();
             this._logger.info(`Depleted clients deleted.`);
             return true;
@@ -723,12 +774,12 @@ export class Api {
         }
     }
 
-    async deleteInboundDepletedClients(inboundId: number) {
+    async deleteInboundDepletedClients(inboundId: number, timeoutMs?: number) {
         const release = await this._mutex.acquire();
 
         try {
             this._logger.debug(`Deleting depleted clients of inbound ${inboundId}...`);
-            await this.post(`/delDepletedClients/${inboundId}`);
+            await this.post(`/delDepletedClients/${inboundId}`, undefined, timeoutMs);
             this.flushCache();
             this._logger.info(`Depleted clients of inbound ${inboundId} deleted.`);
             return true;
@@ -740,7 +791,7 @@ export class Api {
         }
     }
 
-    async getOnlineClients() {
+    async getOnlineClients(timeoutMs?: number) {
         if (this._cache.has("clients:online")) {
             this._logger.debug("Online clients loaded from cache.");
             return this._cache.get("clients:online") as string[];
@@ -749,7 +800,7 @@ export class Api {
         const release = await this._mutex.acquire();
 
         try {
-            const emails = await this.post<string[]>("/onlines");
+            const emails = await this.post<string[]>("/onlines", undefined, timeoutMs);
             this._cache.set("clients:online", emails);
             this._logger.debug("Online clients loaded from API.");
             return emails || [];
