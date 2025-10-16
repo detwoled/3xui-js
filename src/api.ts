@@ -281,9 +281,9 @@ export class Api {
         }
     }
 
-    async serverStatus(timeoutMs?: number) {
+    async getServerStatus(timeoutMs?: number) {
         const t = timeoutMs ?? this._requestTimeout;
-        const endpoint = '/panel/api/server/status'
+        const endpoint = 'panel/api/server/status'
         this._logger.debug(`GET ${endpoint}`);
 
         const source = Axios.CancelToken.source();
@@ -321,22 +321,6 @@ export class Api {
             throw err;
         } finally {
             clearTimeout(timeout);
-        }
-    }
-
-    async checkHealth(timeoutMs?: number) {
-        const release = await this._mutex.acquire();
-
-        try {
-            this._logger.debug("Checking health...");
-            await this.get<Inbound[]>("/list", undefined, timeoutMs);
-            this._logger.debug("Health check passed.");
-            return true;
-        } catch (err) {
-            this._logger.warn("Health check failed.");
-            return false;
-        } finally {
-            release();
         }
     }
 
