@@ -308,17 +308,17 @@ export class Api {
             if (response.status !== 200 || !response.data.success) {
                 this._logger.http(response.data);
                 this._logger.error(`${endpoint} have failed.`);
-                throw new Error(`${endpoint} have failed.`);
+
+                return null;
             }
 
             return response.data.obj as ServerStatus
         } catch (err) {
+            this._logger.http(err);
             if (err instanceof Axios.AxiosError) {
-                this._logger.http(err);
                 this._logger.error(`GET request failed: ${endpoint}`);
             }
 
-            throw err;
         } finally {
             clearTimeout(timeout);
         }
